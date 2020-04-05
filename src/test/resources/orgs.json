@@ -1,0 +1,29 @@
+[
+  {
+    "id": 101,
+    "number": 10.22,
+    "name": "MegaCorp",
+    "shared_tickets": false,
+    "tags": [
+      "Fulton",
+      "West"
+    ],
+    "admin_id": 1
+  },
+  {
+    "id": 102,
+    "name": "TinyCorp",
+    "shared_tickets": false,
+    "tags": [
+      "Cherry",
+      "Collier",
+      "West"
+    ],
+    "admin_id": 5
+  },
+  {
+    "id": 104,
+    "admin_id": 123
+  }
+  
+]
