@@ -7,20 +7,23 @@ import genericSearch.model.{Entity, EntitySelector, Relation}
 import genericSearch.search.Search
 
 
-sealed abstract class TestModel(pkName: FieldName, relations: List[Relation[TestModel]])
-  extends Entity[TestModel](pkName, relations)
+sealed abstract class TestModel(pkName: FieldName, relations: List[Relation[TestModel]], searchableFields: List[FieldName])
+  extends Entity[TestModel](pkName, relations, searchableFields)
 
 object TestModel {
 
+  // tests circular reference of entities
   case object Org
     extends TestModel(
       pkName = "id".asFieldName,
-      relations = List(Relation("admin".asFieldName, "admin_id".asFieldName, User)))
+      relations = List(Relation("admin".asFieldName, "admin_id".asFieldName, User)),
+      searchableFields = List("name".asFieldName))
 
   case object User
     extends TestModel(
       pkName = "_id".asFieldName,
-      relations = List(Relation("organisation".asFieldName, "organization_id".asFieldName, Org)))
+      relations = List(Relation("organization".asFieldName, "organization_id".asFieldName, Org)),
+      searchableFields = List("name".asFieldName))
 
   implicit val es: EntitySelector[TestModel] = new EntitySelector[TestModel] {
     override val entities: List[TestModel] = List(Org, User)

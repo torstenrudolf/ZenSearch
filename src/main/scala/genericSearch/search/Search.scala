@@ -7,9 +7,20 @@ import genericSearch.model.Entity
 
 class Search[T <: Entity[T]](cache: Cache[T]) {
 
-  def search(entity: T)(fieldName: FieldName, fieldValue: FieldValue): List[Response] = {
+  def exactMatchSearch(entity: T)(fieldName: FieldName, fieldValue: FieldValue): List[Response] = {
     for {
       data <- cache.dataForField(entity, fieldName, fieldValue)
+      relations = for {
+        r <- entity.relations
+        fk <- data.get(r.foreignKey)
+        d <- cache.dataForPk(r.entity, fk)
+      } yield (r.name, d)
+    } yield Response(data, relations)
+  }
+
+  def find(entity: T)(fieldName: FieldName, pattern: String): List[Response] = {
+    for {
+      data <- cache.dataForSearch(entity, fieldName, pattern)
       relations = for {
         r <- entity.relations
         fk <- data.get(r.foreignKey)

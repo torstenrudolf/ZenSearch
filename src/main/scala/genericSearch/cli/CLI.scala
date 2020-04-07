@@ -26,16 +26,21 @@ class CLI[E <: Entity[E]](search: Search[E],
 
   private val help: String =
     s"""
-       | 1) To search, write a query like: "<entity>.<fieldName> = <searchTerm>"
+       | 1) To exact match, write a query like: "<entity>.<fieldName> = <searchTerm>"
        |    eg: "User.name = Shelly Clements"
        |    Note:
        |    * Matching is case-insensitive
        |    * If the field value is an array, you also can search against an item of that array
        |      eg: "Organization.tags = Vega"
        |
-       | 2) Type "$HELP" to see a list of all available entities and fields to search for.
+       | 2) On some fields, full search is available.
+       |    Write a query like: "<entity>.<fieldName> contains <searchTerm>"
+       |    eg: "Ticket.subject contains problem"
+       |    Note: type "$HELP" to see the list of fields where full search is available
        |
-       | 3) Type "$QUIT" or press ctrl+d to exit
+       | 3) Type "$HELP" to see a list of all available entities and fields to search for.
+       |
+       | 4) Type "$QUIT" or press ctrl+d to exit
        |""".stripMargin
 
   private def showHelp(writer: Writer): Unit = {
@@ -45,8 +50,10 @@ class CLI[E <: Entity[E]](search: Search[E],
         search.availableFields.map { case (e, fields) =>
           s"""
              |Available search fields for ${es.nameForEntity(e)}:
+             |${e.searchableFields.map(_.asString).mkString(", ")}
              |
-             |${fields.map(_.asString).mkString("\n")}
+             |Available fields for exact match for ${es.nameForEntity(e)}:
+             |${fields.map(_.asString).mkString(", ")}
              |""".stripMargin
         }.mkString("\n\n") ++
         "\n")
@@ -67,7 +74,11 @@ class CLI[E <: Entity[E]](search: Search[E],
                    |""".stripMargin
               )
               writer.flush()
-              search.search(e)(searchTerm.fieldName, searchTerm.fieldValue) match {
+              val searchResult = searchTerm.searchType match {
+                case SearchType.ExactMatch => search.exactMatchSearch(e)(searchTerm.fieldName, searchTerm.fieldValue)
+                case SearchType.Search => search.find(e)(searchTerm.fieldName, searchTerm.fieldValue.asJson.asString.getOrElse(""))
+              }
+              searchResult match {
                 case Nil =>
                   "No results found."
                 case responses =>
@@ -75,6 +86,8 @@ class CLI[E <: Entity[E]](search: Search[E],
                      |Found ${responses.length} result${if (responses.length > 1) "s" else ""}:
                      |
                      |${responses.map(_.asJson.spaces2).mkString("\n\n")}
+                     |
+                     |End of ${responses.length} result${if (responses.length > 1) "s" else ""}
                    """.stripMargin
               }
             }
@@ -117,12 +130,13 @@ class CLI[E <: Entity[E]](search: Search[E],
 
   @tailrec protected final def waitForInput(showWelcome: Boolean = false): Unit = {
     Terminal.readLine(
-      prompt = (if (showWelcome) Console.BOLD + welcomeMsg + Console.RESET else "") + "\n\n" + help,
+      prompt = (if (showWelcome) Console.BOLD + welcomeMsg + Console.RESET else "") + "\n\n" + help + "\n\n",
       reader = reader,
       writer = writer,
       filters = terminalFilters
     ) match {
-      case None => sayBye()
+      case None =>
+        sayBye()
       case Some(s) =>
         history.prepend(s)
         s match {

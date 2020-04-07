@@ -3,7 +3,10 @@ package genericSearch.cache
 import genericSearch.model.Entity
 import genericSearch.common.{FieldName, FieldValue, Index}
 import genericSearch.common.Extensions._
+import gstlib.GeneralizedSuffixTree
+import io.circe.Json
 
+import scala.collection.mutable
 import scala.collection.mutable.{ListBuffer, Map => MMap}
 
 
@@ -14,7 +17,9 @@ import scala.collection.mutable.{ListBuffer, Map => MMap}
  */
 private[cache] class FieldCache[T <: Entity[T]](entity: T,
                                                 data: Map[FieldName, Map[FieldValue, Set[Index]]],
-                                                byPk: Map[FieldValue, Index]) {
+                                                byPk: Map[FieldValue, Index],
+                                                suffixTrees: Map[FieldName, (Array[Index], GeneralizedSuffixTree[Char, String])]) {
+
   def get(name: FieldName, value: FieldValue): List[Index] = {
     if (name == entity.pkName)
       getByPk(value).toList
@@ -28,6 +33,16 @@ private[cache] class FieldCache[T <: Entity[T]](entity: T,
 
   def getByPk(pk: FieldValue): Option[Index] =
     byPk.get(pk)
+
+  def find(name: FieldName, pattern: String): List[Index] =
+    if (pattern.nonEmpty) {
+      // st.find() fails on empty pattern
+      suffixTrees.get(name).toList.flatMap { case (indices, st) =>
+        st.find(pattern.toLowerCase).map { case (i, _) => indices(i) }
+      }
+    }
+    else
+      Nil
 
   def allFieldNames: List[FieldName] =
     entity.pkName +: data.keys.toList
@@ -43,6 +58,8 @@ private[cache] object FieldCache {
 
     val fields = MMap[FieldName, MMap[FieldValue, ListBuffer[Index]]]()
     val byPk = MMap[FieldValue, Index]()
+    val suffixTreeBuilders: Map[FieldName, (mutable.Builder[Index, Array[Index]], mutable.Builder[String, GeneralizedSuffixTree[Char, String]])] =
+      entity.searchableFields.map((_, (Array.newBuilder[Index], GeneralizedSuffixTree.newBuilder[Char, String]))).toMap
 
     def updateMMaps(fieldName: FieldName, fieldValue: FieldValue, i: Index): Unit = {
       val fieldValueMap = fields.getOrElse(fieldName, MMap[FieldValue, ListBuffer[Index]]())
@@ -67,6 +84,15 @@ private[cache] object FieldCache {
         // if the field holds an array, also add each element to cache
         fieldValue.asJson.asArray.foreach(_.foreach(json => updateMMaps(fieldName, json.asFieldValue, i)))
       }
+
+      for {
+        s <- fieldValue.asJson.asString
+        (indices, stb) <- suffixTreeBuilders.get(fieldName)
+        if s.nonEmpty
+      } {
+        stb.addOne(s.toLowerCase)
+        indices.addOne(i)
+      }
     }
 
     val data = fields.map { case (k, v) => (k, v.map { case (k2, v2) => (k2, v2.toSet) }.toMap) }.toMap
@@ -74,7 +100,8 @@ private[cache] object FieldCache {
     Right(new FieldCache[T](
       entity = entity,
       data = data,
-      byPk = byPk.toMap
+      byPk = byPk.toMap,
+      suffixTrees = suffixTreeBuilders.map { case (fn, (indices, b)) => (fn, (indices.result, b.result)) }
     ))
   }
 }

@@ -7,12 +7,22 @@ import genericSearch.common.{FieldName, FieldValue}
  *
  * An entity can have relations to other entities.
  */
-abstract class Entity[T <: Entity[T]](val pkName: FieldName, val relations: List[Relation[T]]) {
+abstract class Entity[T <: Entity[T]](val pkName: FieldName,
+                                      val relations: List[Relation[T]],
+                                      val searchableFields: List[FieldName]) {
   def pkVal(data: Data): FieldValue = data.get(pkName).get
 }
 
 
-case class Relation[T <: Entity[T]](name: FieldName, foreignKey: FieldName, entity: T)
+// _entity needs to be lazy for circular references
+class Relation[T <: Entity[T]](val name: FieldName, val foreignKey: FieldName, _entity: => T) {
+  def entity: T = _entity
+}
+
+object Relation {
+  def apply[T <: Entity[T]](name: FieldName, foreignKey: FieldName, entity: => T) =
+    new Relation[T](name, foreignKey, entity)
+}
 
 
 /**

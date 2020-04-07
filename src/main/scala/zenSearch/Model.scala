@@ -7,16 +7,17 @@ import genericSearch.model.{Entity, EntitySelector, Relation}
 
 object Model {
 
-  sealed abstract class ZenEntity(pkName: FieldName, relations: List[Relation[ZenEntity]])
-    extends Entity[ZenEntity](pkName, relations)
+  sealed abstract class ZenEntity(pkName: FieldName, relations: List[Relation[ZenEntity]], searchableFields: List[FieldName])
+    extends Entity[ZenEntity](pkName, relations, searchableFields)
 
   case object Org
-    extends ZenEntity("_id".asFieldName, relations = Nil)
+    extends ZenEntity("_id".asFieldName, relations = Nil, searchableFields = List("name".asFieldName))
 
   case object User
     extends ZenEntity(
       pkName = "_id".asFieldName,
-      relations = List(Relation("organisation".asFieldName, "organization_id".asFieldName, Org)))
+      relations = List(Relation("organisation".asFieldName, "organization_id".asFieldName, Org)),
+      searchableFields = List("name".asFieldName, "alias".asFieldName))
 
 
   case object Ticket
@@ -25,8 +26,8 @@ object Model {
       relations = List(
         Relation("submitter".asFieldName, "submitter_id".asFieldName, User),
         Relation("assignee".asFieldName, "assignee_id".asFieldName, User),
-        Relation("organization".asFieldName, "organization_id".asFieldName, Org)
-      ))
+        Relation("organization".asFieldName, "organization_id".asFieldName, Org)),
+      searchableFields = List("subject".asFieldName, "description".asFieldName))
 
 
   val ZenEntitySelector: EntitySelector[ZenEntity] = new EntitySelector[ZenEntity] {

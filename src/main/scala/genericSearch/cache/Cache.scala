@@ -16,21 +16,27 @@ class Cache[T <: Entity[T]](cache: Map[T, (Collection, FieldCache[T])]) {
     } yield (e, fc.allFieldNames)).toMap
 
 
-  def dataForField(entity: T, fieldName: FieldName, fieldValue: FieldValue): List[Data] = {
-    val (collection, fieldCache) = cache(entity)
+  def dataForField(entity: T, fieldName: FieldName, fieldValue: FieldValue): List[Data] =
     for {
+      (collection, fieldCache) <- cache.get(entity).toList
       index <- fieldCache.get(fieldName, fieldValue)
       data <- collection.get(index)
     } yield data
-  }
 
-  def dataForPk(entity: T, pk: FieldValue): Option[Data] = {
-    val (collection, fieldCache) = cache(entity)
+  def dataForPk(entity: T, pk: FieldValue): Option[Data] =
     for {
+      (collection, fieldCache) <- cache.get(entity)
       index <- fieldCache.getByPk(pk)
       data <- collection.get(index)
     } yield data
-  }
+
+  def dataForSearch(entity: T, fieldName: FieldName, pattern: String): List[Data] =
+    for {
+      (collection, fieldCache) <- cache.get(entity).toList
+      index <- fieldCache.find(fieldName, pattern)
+      data <- collection.get(index)
+    } yield data
+
 
 }
 
