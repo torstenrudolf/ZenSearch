@@ -40,6 +40,4 @@ SuffixTrees are a efficient way for substring searching.
 To find all strings that contain the substring is only of linear order relative to the length of the substring.
 But building the SuffixTrees has linear time-complexity relative to the number of strings.
 
-I used the library [`gstlib`](https://github.com/GuillaumeDD/gstlib).
-Unfortunately, this lib is currently not published for scala 2.13, so I forked it, 
-ported it to 2.13 and added the jar under `/lib` to this project for now.
+I used the library [`gstlib`](https://github.com/GuillaumeDD/gstlib) to create and search suffix trees.

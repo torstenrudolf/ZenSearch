@@ -10,8 +10,8 @@ libraryDependencies ++= List(
   "com.lihaoyi" %% "ammonite-terminal" % "2.0.4",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
   "org.typelevel" %% "cats-core" % "2.1.1",
-  "com.lihaoyi" %% "utest" % "0.7.4" % "test"
-//  "com.github.guillaumedd" %% "gstlib" % "0.1.2"  // is not published for scala 2.13.1, so I build it and added to /lib
+  "com.lihaoyi" %% "utest" % "0.7.4" % "test",
+  "com.github.guillaumedd" %% "gstlib" % "0.1.3"
 )
 
 testFrameworks += new TestFramework("utest.runner.Framework")
