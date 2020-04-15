@@ -16,7 +16,7 @@ object SearchType {
 
 }
 
-private[cli] case class SearchTerm(entity: String, fieldName: FieldName, fieldValue: FieldValue, searchType: SearchType)
+private[cli] case class SearchTerm(entity: String, fieldName: FieldName, fieldValues: List[FieldValue], searchType: SearchType)
 
 
 /**
@@ -56,14 +56,19 @@ private[cli] object SearchTermParser {
 
     def searchTerm: Parser[SearchTerm] = entity ~ dot ~ fieldName ~ searchType ~ fieldValue ^^ { case e ~ _ ~ fn ~ st ~ fv =>
       // try to parse as json
-      val json = io.circe.parser.parse(fv) match {
+      val fieldVals: List[FieldValue] = io.circe.parser.parse(fv) match {
         case Left(_) =>
           // treat value as string
-          io.circe.Json.fromString(fv)
+          fv.split(" or ").map { s =>
+            io.circe.parser.parse(s) match {
+              case Left(_) => io.circe.Json.fromString(s).asFieldValue
+              case Right(j) => j.asFieldValue
+            }
+          }.toList
         case Right(json) =>
-          json
+          List(json.asFieldValue)
       }
-      SearchTerm(e, fn.asFieldName, json.asFieldValue, st)
+      SearchTerm(e, fn.asFieldName, fieldVals, st)
     }
 
     def parse(s: String): Option[SearchTerm] =

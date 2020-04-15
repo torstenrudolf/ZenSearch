@@ -26,7 +26,7 @@ object CLISpec extends TestSuite {
 
       assert(out contains "help")
       assert(out contains "To exact match, write a query like: \"<entity>.<fieldName> = <searchTerm>\"")
-      assert(out contains "Searching for Users with _id = 3...")
+      assert(out contains "Searching for Users with _id = List(3)...")
       assert(out contains "Found 1 result:")
       assert(out contains "\"name\" : \"Ingrid Wagner\"")
     }
@@ -34,7 +34,7 @@ object CLISpec extends TestSuite {
 
     test("SearchTermParser parses string as value2") {
       assert(SearchTermParser.parse("User._id contains test string") ==
-        Some(SearchTerm("User", "_id".asFieldName, Json.fromString("test string").asFieldValue, SearchType.Search)))
+        Some(SearchTerm("User", "_id".asFieldName, List(Json.fromString("test string").asFieldValue), SearchType.Search)))
     }
 
 
@@ -43,7 +43,7 @@ object CLISpec extends TestSuite {
         Some(SearchTerm(
           "User",
           "_id".asFieldName,
-          Json.fromFields(List(("tags", Json.fromValues(List(Json.fromString("tag1"), Json.fromString("tag2")))))).asFieldValue,
+          List(Json.fromFields(List(("tags", Json.fromValues(List(Json.fromString("tag1"), Json.fromString("tag2")))))).asFieldValue),
           SearchType.ExactMatch)))
     }
 

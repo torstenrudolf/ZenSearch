@@ -26,7 +26,7 @@ object GenericSearchSpec extends TestSuite {
 
     test("Search with relation lookup works") {
 
-      val orgSearch = search.exactMatchSearch(Org)("name".asFieldName, Json.fromString("TinyCorp").asFieldValue)
+      val orgSearch = search.exactMatchSearch(Org)("name".asFieldName, List(Json.fromString("TinyCorp").asFieldValue))
       assert(orgSearch.size == 1)
       val searchRes = orgSearch.head.asJson
       assert(searchRes == Json.fromFields(Map(
@@ -61,10 +61,9 @@ object GenericSearchSpec extends TestSuite {
 
     test("Search copes if relation reference cannot be resolved") {
 
-      val orgSearch = search.exactMatchSearch(Org)("id".asFieldName, Json.fromInt(104).asFieldValue)
-      assert(orgSearch.size == 1)
-      val searchRes = orgSearch.head.asJson
-      assert(searchRes == Json.fromFields(Map(
+      val orgSearch = search.exactMatchSearch(Org)("id".asFieldName, List(Json.fromInt(104).asFieldValue, Json.fromInt(105).asFieldValue))
+      assert(orgSearch.size == 2)
+      assert(orgSearch.head.asJson == Json.fromFields(Map(
         "object" -> io.circe.parser.parse(
           """
             |{
@@ -75,24 +74,35 @@ object GenericSearchSpec extends TestSuite {
         ).right.get,
         "resolvedRelations" -> Json.fromFields(List())
       )))
+      assert(orgSearch(1).asJson == Json.fromFields(Map(
+        "object" -> io.circe.parser.parse(
+          """
+            |{
+            |    "id": 105,
+            |    "name": "i'm 105!"
+            |  }
+            |""".stripMargin
+        ).right.get,
+        "resolvedRelations" -> Json.fromFields(List())
+      )))
     }
 
     test("Lookup on array fields") {
-      val orgSearch = search.exactMatchSearch(Org)("tags".asFieldName,Json.fromValues(List("Fulton", "West").map(Json.fromString)).asFieldValue)
+      val orgSearch = search.exactMatchSearch(Org)("tags".asFieldName, List(Json.fromValues(List("Fulton", "West").map(Json.fromString)).asFieldValue))
       assert(orgSearch.size == 1)
       val id = orgSearch.head.data.get("id".asFieldName).get
       assert(id == Json.fromInt(101).asFieldValue)
     }
 
     test("Lookup on array fields matching on single value") {
-      val orgSearch = search.exactMatchSearch(Org)("tags".asFieldName,Json.fromString("West").asFieldValue)
+      val orgSearch = search.exactMatchSearch(Org)("tags".asFieldName, List(Json.fromString("West").asFieldValue))
       assert(orgSearch.size == 2)
       val ids = orgSearch.map(_.data.get("id".asFieldName).get).toSet
       assert(ids == Set(101, 102).map(Json.fromInt).map(_.asFieldValue))
     }
 
     test("Can search for empty fields") {
-      val userSearch = search.exactMatchSearch(User)("name".asFieldName, Json.fromString("").asFieldValue)
+      val userSearch = search.exactMatchSearch(User)("name".asFieldName, List(Json.fromString("").asFieldValue))
       val searchRes = userSearch.map(_.asJson)
       assert(searchRes == List(
         Json.fromFields(Map(
@@ -111,7 +121,7 @@ object GenericSearchSpec extends TestSuite {
     }
 
     test("Search is case-insensitive") {
-        val orgSearch = search.exactMatchSearch(Org)("tags".asFieldName,Json.fromString("WEST").asFieldValue)
+        val orgSearch = search.exactMatchSearch(Org)("tags".asFieldName, List(Json.fromString("WEST").asFieldValue))
         assert(orgSearch.size == 2)
         val ids = orgSearch.map(_.data.get("id".asFieldName).get).toSet
         assert(ids == Set(101, 102).map(Json.fromInt).map(_.asFieldValue))
@@ -141,7 +151,7 @@ object GenericSearchSpec extends TestSuite {
 
 
     test("Full search works even if not all entities have the indexed fieldName") {
-      val res = search.find(User)("name".asFieldName, "oU sChMi")
+      val res = search.find(User)("name".asFieldName, List("oU sChMi"))
       assert(res.size == 1)
       val searchRes = res.head.asJson
       assert(searchRes == Json.fromFields(Map(

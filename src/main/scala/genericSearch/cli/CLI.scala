@@ -70,13 +70,13 @@ class CLI[E <: Entity[E]](search: Search[E],
             if (search.availableFields.getOrElse(e, Nil).contains(searchTerm.fieldName)) {
               writer.write(
                 s"""
-                   |Searching for ${es.nameForEntity(e)}s with ${searchTerm.fieldName.asString} = ${searchTerm.fieldValue.asJson.noSpaces}...\n
+                   |Searching for ${es.nameForEntity(e)}s with ${searchTerm.fieldName.asString} = ${searchTerm.fieldValues.map(_.asJson)}...\n
                    |""".stripMargin
               )
               writer.flush()
               val searchResult = searchTerm.searchType match {
-                case SearchType.ExactMatch => search.exactMatchSearch(e)(searchTerm.fieldName, searchTerm.fieldValue)
-                case SearchType.Search => search.find(e)(searchTerm.fieldName, searchTerm.fieldValue.asJson.asString.getOrElse(""))
+                case SearchType.ExactMatch => search.exactMatchSearch(e)(searchTerm.fieldName, searchTerm.fieldValues)
+                case SearchType.Search => search.find(e)(searchTerm.fieldName, searchTerm.fieldValues.map(_.asJson.asString.getOrElse("")))
               }
               searchResult match {
                 case Nil =>
